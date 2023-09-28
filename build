@@ -193,8 +193,6 @@ install_system() {
     echo "en_US.UTF-8 UTF-8" | sudo tee -a /mnt/etc/locale.gen
     sudo arch-chroot /mnt locale-gen
 
-    echo "Populate keyring..."
-    sudo arch-chroot /mnt pacman-key --populate archlinux
 
     echo "Enable services..."
     sudo arch-chroot /mnt systemctl enable "${SERVICES[@]}"
