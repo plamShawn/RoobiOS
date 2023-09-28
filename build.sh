@@ -1,0 +1,351 @@
+#!/bin/bash
+
+container_do() {
+    local COMMAND=("$@")
+
+    local NATIVE_BUILD="false"
+    local CONTAINER_BACKEND="sudo -i podman"
+    local CONTAINER_REGISTRY=""
+    local NO_CONTAINER_UPDATE="false"
+    local CONTAINER_SHELL="false"
+    local PRIVILEGED_CONTAINER="true"
+
+    if ! $NATIVE_BUILD
+    then
+        if [[ "$(basename "$CONTAINER_BACKEND")" == "docker" ]] && "$CONTAINER_BACKEND" --help | grep -q podman
+        then
+            echo "'$CONTAINER_BACKEND' backend is selected, but the functionality is actually provided by 'podman' backend. Updating accordingly..."
+            CONTAINER_BACKEND="$(command -v podman)"
+        fi
+
+        local CONTAINER_IMAGE="$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}roobi:master")"
+        local CONTAINER_EXIT_CODE=0
+
+        if ! $NO_CONTAINER_UPDATE
+        then
+            if [[ -z $CONTAINER_REGISTRY ]]
+            then
+                $CONTAINER_BACKEND build --force-rm -t "${CONTAINER_REGISTRY}roobi:master" "$SCRIPT_DIR/container"
+            else
+                $CONTAINER_BACKEND pull "${CONTAINER_REGISTRY}roobi:master"
+            fi
+        fi
+
+        if [[ $CONTAINER_IMAGE != "$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}roobi:master")" ]]
+        then
+            $CONTAINER_BACKEND container rm roobi &>/dev/null || true
+            $CONTAINER_BACKEND image rm "${CONTAINER_REGISTRY}roobi:builder" &>/dev/null || true
+        fi
+
+        CONTAINER_BUILDER="$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}roobi:builder")"
+        if [[ -z $CONTAINER_BUILDER ]]
+        then
+            $CONTAINER_BACKEND tag "${CONTAINER_REGISTRY}roobi:master" "${CONTAINER_REGISTRY}roobi:builder"
+        fi
+
+        CONTAINER_OPTIONS=( "--name" "roobi" )
+        CONTAINER_OPTIONS+=( "--workdir" "$PWD" )
+        CONTAINER_OPTIONS+=( "--mount" "type=bind,source=$PWD,destination=$PWD" )
+        CONTAINER_OPTIONS+=( "--mount" "type=bind,source=/mnt,destination=/mnt" )
+        # need udev inside the container for lsblk to get filesystem UUID (used by genfstab)
+        CONTAINER_OPTIONS+=( "--mount" "type=bind,source=/run/udev,destination=/run/udev" )
+        # need /dev/mapper/loopXpY symlinks for genfstab to query
+        CONTAINER_OPTIONS+=( "--mount" "type=bind,source=/dev/mapper,destination=/dev/mapper" )
+        CONTAINER_OPTIONS+=( "--mount" "type=bind,source=$(realpath $SCRIPT_DIR/../../..),destination=$(realpath $SCRIPT_DIR/../../..)" )
+        if [[ -t 0 ]]
+        then
+            CONTAINER_OPTIONS+=( "-it" )
+        fi
+        if [[ "$PWD" != "$SCRIPT_DIR" ]]
+        then
+            CONTAINER_OPTIONS+=( "--mount" "type=bind,source=$SCRIPT_DIR,destination=$SCRIPT_DIR" )
+        fi
+        if $PRIVILEGED_CONTAINER
+        then
+            CONTAINER_OPTIONS+=( "--privileged" )
+        fi
+        $CONTAINER_BACKEND container kill roobi &>/dev/null || true
+        $CONTAINER_BACKEND container rm roobi &>/dev/null || true
+        if [[ "$(basename "$CONTAINER_BACKEND")" =~ "podman" ]]
+        then
+            CONTAINER_OPTIONS+=( "--user" "root" )
+            if $CONTAINER_SHELL
+            then
+                if ! $CONTAINER_BACKEND run "${CONTAINER_OPTIONS[@]}" "${CONTAINER_REGISTRY}roobi:builder" bash
+                then
+                    CONTAINER_EXIT_CODE="$($CONTAINER_BACKEND inspect roobi --format='{{.State.ExitCode}}')"
+                fi
+            else
+                if ! $CONTAINER_BACKEND run "${CONTAINER_OPTIONS[@]}" "${CONTAINER_REGISTRY}roobi:builder" "${COMMAND[@]}"
+                then
+                    CONTAINER_EXIT_CODE="$($CONTAINER_BACKEND inspect roobi --format='{{.State.ExitCode}}')"
+                fi
+                $CONTAINER_BACKEND container rm roobi
+            fi
+        else
+            local CONTAINER_SUDO="sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner"
+            if $CONTAINER_SHELL
+            then
+                if ! $CONTAINER_BACKEND run "${CONTAINER_OPTIONS[@]}" "${CONTAINER_REGISTRY}roobi:builder" bash -c "$CONTAINER_SUDO -i"
+                then
+                    CONTAINER_EXIT_CODE="$($CONTAINER_BACKEND inspect roobi --format='{{.State.ExitCode}}')"
+                fi
+            else
+                if ! $CONTAINER_BACKEND run "${CONTAINER_OPTIONS[@]}" "${CONTAINER_REGISTRY}roobi:builder" bash -c "$CONTAINER_SUDO "${COMMAND[@]}""
+                then
+                    CONTAINER_EXIT_CODE="$($CONTAINER_BACKEND inspect roobi --format='{{.State.ExitCode}}')"
+                fi
+                $CONTAINER_BACKEND container rm roobi
+            fi
+        fi
+        return $CONTAINER_EXIT_CODE
+    fi
+}
+
+cleanup() {
+    local OUTPUT_FILE="$1"
+
+    sync
+    sudo umount -lR /mnt || true
+    sudo kpartx -d "$OUTPUT_FILE" || true
+    rm "$OUTPUT_FILE" || true
+}
+
+create_blank_image() {
+    local OUTPUT_FILE="$1"
+
+    truncate -s 8G "$OUTPUT_FILE"
+    sgdisk --clear --new=1::512M --typecode=1:ef00 --new=2:: "$OUTPUT_FILE"
+}
+
+mount_image() {
+    local OUTPUT_FILE="$1"
+
+    sudo kpartx -a "$OUTPUT_FILE"
+
+    for i in /sys/class/block/loop*
+    do
+        if [[ "$(cat "$i/loop/backing_file")" == "$(realpath "$OUTPUT_FILE")" ]]
+        then
+            echo "$(basename "$i")"
+            return
+        fi
+    done
+
+    return 1
+}
+
+format_partitions() {
+    local TARGET_DEV="$1"
+
+    local EFI_DEV="${TARGET_DEV}p1"
+    local ROOT_DEV="${TARGET_DEV}p2"
+
+    sudo mkfs.fat -F 32 "$EFI_DEV"
+    sudo mkfs.btrfs "$ROOT_DEV"
+}
+
+mount_partitions() {
+    local TARGET_DEV="$1"
+
+    local EFI_DEV="${TARGET_DEV}p1"
+    local ROOT_DEV="${TARGET_DEV}p2"
+
+    sudo mount -o compress=zstd "$ROOT_DEV" /mnt
+    sudo mkdir -p /mnt/boot
+    sudo mount "$EFI_DEV" /mnt/boot
+}
+
+install_system() {
+    local PACKAGES=(
+        base linux linux-firmware electron sudo intel-ucode efibootmgr networkmanager xorg-server xorg-xinit openssh
+    )
+    local SERVICES=(
+        systemd-timesyncd
+        NetworkManager
+        sshd
+        growroot
+    )
+
+    echo "Install base system..."
+    sudo pacstrap -K /mnt "${PACKAGES[@]}"
+    genfstab -U /mnt | sudo tee -a /mnt/etc/fstab
+    # remove swap entries
+    sudo sed -i "s/^.*swap.*$//g" /mnt/etc/fstab
+
+    echo "Set up user accounts..."
+    sudo arch-chroot /mnt useradd -m -G input ps
+    echo ps:ps | sudo arch-chroot /mnt chpasswd
+
+    echo "Install config files..."
+    sudo cp -r "$SCRIPT_DIR/root/." /mnt
+
+    echo "Install bootloader..."
+    sudo arch-chroot /mnt bootctl install
+
+    echo "Configure default system settings..."
+    sudo systemd-firstboot --root=/mnt --force \
+        --locale=en_US.UTF-8 --locale-messages=en_US.UTF-8 --keymap=us \
+        --timezone=UTC \
+        --hostname=Roobi --root-password=root
+    
+    echo "Generate locale..."
+    echo "en_US.UTF-8 UTF-8" | sudo tee -a /mnt/etc/locale.gen
+    sudo arch-chroot /mnt locale-gen
+
+    echo "Populate keyring..."
+    sudo arch-chroot /mnt pacman-key --populate archlinux
+
+    echo "Enable services..."
+    sudo arch-chroot /mnt systemctl enable "${SERVICES[@]}"
+
+    echo "Rebuild initramfs"
+    sudo arch-chroot /mnt mkinitcpio -P
+
+
+    echo "Clean up..."
+    sudo rm /mnt/var/cache/pacman/pkg/*
+    sudo rm /mnt/var/lib/pacman/sync/*.db
+}
+
+find_root_part() {
+    local ROOT_PART
+    ROOT_PART="$(sgdisk -p "$1" | grep "rootfs" | tail -n 1 | tr -s ' ' | cut -d ' ' -f 2)"
+    if [[ -z $ROOT_PART ]]
+    then
+        ROOT_PART="$(sgdisk -p "$1" | grep -e "8300" -e "EF00" | tail -n 1 | tr -s ' ' | cut -d ' ' -f 2)"
+    fi
+    echo $ROOT_PART
+}
+
+main() {
+    local OUTPUT_FILE="$SCRIPT_DIR/Roobi.img"
+
+    cleanup "$OUTPUT_FILE"
+
+    create_blank_image "$OUTPUT_FILE"
+
+    local TARGET_DEV
+
+    if ! TARGET_DEV="/dev/mapper/$(mount_image "$OUTPUT_FILE")"
+    then
+        echo "Failed to mount the image!" >&2
+        cleanup "$OUTPUT_FILE"
+        return 1
+    fi
+
+    local EFI_DEV="${TARGET_DEV}p1"
+    local ROOT_DEV="${TARGET_DEV}p2"
+
+    format_partitions "$TARGET_DEV"
+    mount_partitions "$TARGET_DEV"
+
+    if $CONTAINER_BUILD
+    then
+        container_do "$(realpath "$0")" install_system
+    else
+        install_system
+    fi
+
+    echo "Update kernel argumeents..."
+    echo "options root=UUID=$(sudo blkid -o value -s UUID "$ROOT_DEV") $(cat /mnt/etc/kernel/cmdline)" | sudo tee -a /mnt/boot/loader/entries/arch.conf
+
+    echo "Shrink rootfs..."
+    local SHRINK_SIZE=1 DEVICE_SIZE
+    while sudo btrfs filesystem resize -${SHRINK_SIZE} /mnt
+    do
+        SHRINK_SIZE=$(( $(sudo btrfs filesystem usage -b /mnt | grep "Free (estimated)" | sed "s/.*min: \([0-9]*\).*/\1/") / 2 ))
+    done
+    DEVICE_SIZE=$(( $(sudo btrfs filesystem usage -b /mnt | grep "Device size" | tr -s ' ' | cut -d ' ' -f 4) ))
+
+    echo "Unmount filesystem..."
+    sudo umount -lR /mnt
+
+    echo "Unmount image..."
+    sudo kpartx -d "$OUTPUT_FILE"
+
+    echo "Update partition table..."
+    local ROOT_PART="$(find_root_part "$OUTPUT_FILE")"
+    local SECTOR_SIZE="$(sgdisk -p "$OUTPUT_FILE" | grep "Sector size (logical):" | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4)"
+    local START_SECTOR="$(sgdisk -i "$ROOT_PART" "$OUTPUT_FILE" | grep "First sector:" | cut -d ' ' -f 3)"
+    local NEW_SIZE=$(( $START_SECTOR * $SECTOR_SIZE + $DEVICE_SIZE ))
+    cat << EOF | parted ---pretend-input-tty "$OUTPUT_FILE" > /dev/null 2>&1
+resizepart $ROOT_PART 
+${NEW_SIZE}B
+yes
+EOF
+
+    echo "Shrink image..."
+    local END_SECTOR="$(sgdisk -i "$ROOT_PART" "$OUTPUT_FILE" | grep "Last sector:" | cut -d ' ' -f 3)"
+    # leave some space for the secondary GPT header
+    local FINAL_SIZE="$(( ($END_SECTOR + 34) * $SECTOR_SIZE ))"
+    truncate "--size=$FINAL_SIZE" "$OUTPUT_FILE" > /dev/null
+
+    echo "Fix backup GPT table..."
+    sgdisk -ge "$OUTPUT_FILE" &> /dev/null || true
+
+    echo "Test partition table for additional issue..."
+    sgdisk -v "$OUTPUT_FILE" > /dev/null
+
+    if $COMPRESS_IMAGE
+    then
+        echo "Compress image..."
+        xz -fT 0 "$OUTPUT_FILE"
+    fi
+
+    echo "Sync data..."
+    sync
+
+    echo "Image build completed."
+}
+
+cmdline() {
+    local TEMP
+    
+    if ! TEMP="$(getopt -o "c" -l "no-container,compress" -n "$0" -- "$@")"
+    then
+        return 1
+    fi
+    eval set -- "$TEMP"
+
+    CONTAINER_BUILD="true"
+    COMPRESS_IMAGE="false"
+
+    while true
+    do
+        TEMP="$1"
+        shift
+        case "$TEMP" in
+            --no-container)
+                CONTAINER_BUILD="false"
+                ;;
+            -c|--compress)
+                COMPRESS_IMAGE="true"
+                ;;
+            --)
+                break
+                ;;
+        esac
+    done
+
+    if (( $# != 0))
+    then
+        local ACTION="$1"
+        shift
+        if [[ $(type -t "$ACTION") == function ]]
+        then
+            eval "$ACTION" "$@"
+        else
+            echo "Unsupported action: '$ACTION'" >&2
+            return 1
+        fi
+    else
+        main
+    fi
+}
+
+set -euo pipefail
+shopt -s nullglob
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+
+cmdline "$@"
