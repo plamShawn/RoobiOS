@@ -248,7 +248,7 @@ main() {
     fi
 
     echo "Update kernel argumeents..."
-    echo "options root=UUID=$(sudo blkid -o value -s UUID "$ROOT_DEV") rw splash plymouth.ignore-serial-consoles iomem=relaxed" | sudo tee -a /mnt/boot/loader/entries/arch.conf
+    echo "options root=UUID=$(sudo blkid -o value -s UUID "$ROOT_DEV") rw splash plymouth.ignore-serial-consoles" | sudo tee -a /mnt/boot/loader/entries/arch.conf
 
     echo "Shrink rootfs..."
     local SHRINK_SIZE=1 DEVICE_SIZE
