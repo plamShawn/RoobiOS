@@ -197,9 +197,6 @@ install_system() {
     echo "Enable services..."
     sudo arch-chroot /mnt systemctl enable "${SERVICES[@]}"
 
-    echo "Rebuild initramfs"
-    sudo arch-chroot /mnt mkinitcpio -P
-
 
     echo "Clean up..."
     sudo rm /mnt/var/cache/pacman/pkg/*
