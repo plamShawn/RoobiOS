@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - name: Build
         run: |
-          bash build.sh
+          sudo bash build.sh
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
