@@ -3,7 +3,7 @@ Description=Grow root partition
 After=-.mount
 
 [Service]
-ExecStart=/usr/local/sbin/growroot
+ExecStart=/bin/bash /usr/local/sbin/growroot
 
 [Install]
 WantedBy=default.target
