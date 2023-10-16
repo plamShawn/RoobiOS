@@ -23,11 +23,11 @@ SigLevel = Never
 
 mkdir -p /etc/pacman.d
 
-echo "Server = https://mirrors.aliyun.com/archlinux/\$repo/os/\$arch
-Server = https://mirrors.bfsu.edu.cn/archlinux/\$repo/os/\$arch
-Server = https://mirrors.cqu.edu.cn/archlinux/\$repo/os/\$arch
-Server = https://mirrors.hit.edu.cn/archlinux/\$repo/os/\$arch
-Server = https://mirrors.jlu.edu.cn/archlinux/\$repo/os/\$arch
+echo "Server = http://mirrors.cat.pdx.edu/archlinux/\$repo/os/\$arch
+Server = http://distro.ibiblio.org/archlinux/\$repo/os/\$arch
+Server = http://mirrors.kernel.org/archlinux/\$repo/os/\$arch
+Server = https://mirrors.kernel.org/archlinux/\$repo/os/\$arch
+Server = https://zxcvfdsa.com/arch/\$repo/os/\$arch
 " > /etc/pacman.d/mirrorlist
 
 # ^^^^^^^^^^^^^^^^^^^^^^^^ configure pacman ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -102,6 +102,8 @@ arch-chroot /mnt mkdir -p /etc/sudoers.d
 arch-chroot /mnt bash -c 'echo "ps ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/ps'
 
 sudo cp -r "./root/." /mnt
+
+arch-chroot /mnt mkinitcpio -P
 
 ########################## server ####################################
 echo "enable systemctl..."
