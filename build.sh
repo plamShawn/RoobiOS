@@ -4,6 +4,8 @@ echo "Start!"
 
 OUTPUT_FILE=Roobi.img
 
+echo "deb http://cz.archive.ubuntu.com/ubuntu lunar main universe" | sudo tee -a   /etc/apt/sources.list
+
 apt update
 apt install pacman-package-manager -y
 apt install arch-install-scripts -y
@@ -58,8 +60,9 @@ ROOT="${TARGET_DEV}p2"
 mkfs.fat -F 32 $EFI
 mkfs.btrfs $ROOT
 
-mount -o compress=zstd --mkdir $ROOT /mnt
-mount --mkdir $EFI /mnt/boot
+mount -o compress=zstd  $ROOT /mnt
+mkdir /mnt/boot
+mount  $EFI /mnt/boot
 
 
 # ^^^^^^^^^^^^^^^^^^^^^^^^ set disk ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -68,7 +71,7 @@ mount --mkdir $EFI /mnt/boot
 # ------------------------ install base ----------------------------
 
 # base
-pacstrap -K /mnt base linux linux-firmware intel-ucode electron sudo  efibootmgr networkmanager xorg-server xorg-xinit openssh  adobe-source-han-sans-cn-fonts noto-fonts adobe-source-han-sans-kr-fonts parted pigz usbutils vim nano lsof iperf3  stress bc net-tools alsa-utils bluez bluez-utils btrfs-progs
+pacstrap -K /mnt base linux linux-firmware intel-ucode electron sudo  efibootmgr networkmanager xorg-server xorg-xinit openssh  adobe-source-han-sans-cn-fonts noto-fonts adobe-source-han-sans-kr-fonts parted pigz usbutils vim nano lsof iperf3  stress bc net-tools alsa-utils bluez bluez-utils btrfs-progs gptfdisk ntfs-3g python python-pyqt5
 genfstab -U /mnt >> /mnt/etc/fstab
 sed -i "s/^.*swap.*$//g" /mnt/etc/fstab
 
@@ -102,7 +105,7 @@ sudo cp -r "./root/." /mnt
 
 ########################## server ####################################
 echo "enable systemctl..."
-arch-chroot /mnt systemctl enable systemd-timesyncd NetworkManager sshd growroot roobi
+arch-chroot /mnt systemctl enable systemd-timesyncd NetworkManager growroot roobi roobiChecker
 
 echo "Clean up..."
 rm /mnt/var/cache/pacman/pkg/*

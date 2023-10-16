@@ -1,0 +1,53 @@
+{
+  "running_on_start": false
+  "except_item": []
+  "font_size": 15
+  "auto": true,
+  "log_file": "1.log"
+  "tests": {
+    "ddr": {
+      gt:15500,
+      lt:16500
+    },
+    "cpu": {
+      # 最低失败频率
+      "freq": 2200000,
+      # cpu型号
+      "model": "Intel(R) Celeron(R) J6412 @ 2.00GHz"
+    },
+    "HDMI": {
+      "size":"3840x2160",
+      "devices":"card1-HDMI-A-1"
+    }
+    "emmc": {
+      "read":200 ,
+      "write":100
+    },
+    usb20:{
+      "read":10 ,
+      "write":5
+    },
+    usb30:{
+      "read":100 ,
+      "write":55
+    },
+    "sata":{
+      "count":2,
+      "read":400,
+      "write":300
+    },
+    "eth":{
+      "speed":2,// 单位GB
+      "server_ip":"192.168.4.250"
+    },
+    wlan:{
+      "ssid":"MESH_5G",
+      "password":"12345678",
+      "speed":600 // 单位MB
+      "server_ip":"192.168.4.250"
+    },
+    mac:{
+      "prefix":"10:02:b5:02" // mac地址前缀
+    }
+  }
+}
