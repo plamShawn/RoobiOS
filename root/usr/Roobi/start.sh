@@ -3,7 +3,7 @@
 cd /usr/Roobi
 
 if [ -d "new" ];then
-    echo "The roobi update"
+    echo "Roobi update"
 
     if [ -d "backup" ];then
         rm -rf backup

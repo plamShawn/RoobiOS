@@ -13,7 +13,7 @@ function check_item() {
 }
 
 function check() {
-    time_list=(1 0.5 0.5 1 2 3 10 10 10 10 10 10 10 10)
+    time_list=(0 1 0.5 0.5 1 2 3 10 10 10 10 10 10 10 10)
     for _time in ${time_list[@]}; do
         echo "checker $_time"
         check_item $_time
@@ -41,7 +41,7 @@ if [ -d "original" ];then
     echo "test failed change to original"
     systemctl kill roobi
     rm -rf now
-    cp original now
+    cp -r original now
     /bin/bash now/install.sh
     systemctl start roobi
     check
