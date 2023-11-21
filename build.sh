@@ -73,20 +73,21 @@ mount $EFI /mnt/boot
 # ------------------------ install base ----------------------------
 
 # base
-pacstrap -K /mnt base linux linux-firmware intel-ucode xf86-video-intel electron sudo efibootmgr networkmanager xorg-server xorg-xinit openssh adobe-source-han-sans-cn-fonts noto-fonts adobe-source-han-sans-kr-fonts parted pigz usbutils vim nano lsof iperf3 stress bc net-tools alsa-utils bluez bluez-utils btrfs-progs gptfdisk ntfs-3g python python-pyqt5 rsync bash-completion wget bind-tools hdparm smartmontools hdparm sysstat lvm2 mdadm tcpdump unzip timeshift gzip xz dmidecode
+pacstrap -K /mnt base linux-lts linux-firmware intel-ucode xf86-video-intel electron sudo grub efibootmgr networkmanager xorg-server xorg-xinit openssh adobe-source-han-sans-cn-fonts noto-fonts adobe-source-han-sans-kr-fonts parted pigz usbutils vim nano lsof iperf3 stress bc net-tools alsa-utils bluez bluez-utils btrfs-progs gptfdisk ntfs-3g python python-pyqt5 rsync bash-completion wget bind-tools hdparm smartmontools hdparm sysstat lvm2 mdadm tcpdump unzip timeshift gzip xz dmidecode python-evdev python-pyserial libgpiod nginx
 genfstab -U /mnt >>/mnt/etc/fstab
-sed -i "s/^.*swap.*$//g" /mnt/etc/fstab
+#sed -i "s/^.*swap.*$//g" /mnt/etc/fstab
 
 # boot
-echo "Createboot ..."
 
-arch-chroot /mnt mkdir -p /boot/loader/entries
-arch-chroot /mnt bash -c 'echo "title Roobi OS
-linux /vmlinuz-linux
-initrd /intel-ucode.img
-initrd /initramfs-linux.img" > /boot/loader/entries/arch.conf'
-arch-chroot /mnt bash -c 'echo "options root=UUID=$(blkid -o value -s UUID `mount | grep " / "`) rw quiet" >> /boot/loader/entries/arch.conf'
-arch-chroot /mnt bootctl --path=/boot install
+#arch-chroot /mnt mkdir -p /boot/loader/entries
+#arch-chroot /mnt bash -c 'echo "title Roobi OS
+#linux /vmlinuz-linux-lts
+#initrd /intel-ucode.img
+#initrd /initramfs-linux-lts.img" > /boot/loader/entries/arch.conf'
+#arch-chroot /mnt bash -c 'echo "editor  no" > /boot/loader/loader.conf'
+
+#arch-chroot /mnt bash -c 'echo "options root=UUID=$(blkid -o value -s UUID `mount | grep " / "`) rw quiet intel_idle.max_cstate=2" >> /boot/loader/entries/arch.conf'
+#arch-chroot /mnt bootctl --path=/boot install
 
 echo "Generate locale..."
 echo "en_US.UTF-8 UTF-8" >>/mnt/etc/locale.gen
@@ -102,9 +103,16 @@ echo ps:ps | arch-chroot /mnt chpasswd
 arch-chroot /mnt mkdir -p /etc/sudoers.d
 arch-chroot /mnt bash -c 'echo "ps ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/ps'
 
+arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=ROOBI --removable
 sudo cp -r "./root/." /mnt
 
 arch-chroot /mnt mkinitcpio -P
+
+echo "Createboot ..."
+
+
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+
 
 ########################## server ####################################
 echo "enable systemctl..."
@@ -146,7 +154,7 @@ ROOT_PART="$(find_root_part "$OUTPUT_FILE")"
 SECTOR_SIZE="$(sgdisk -p "$OUTPUT_FILE" | grep "Sector size (logical):" | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4)"
 START_SECTOR="$(sgdisk -i "$ROOT_PART" "$OUTPUT_FILE" | grep "First sector:" | cut -d ' ' -f 3)"
 NEW_SIZE=$(($START_SECTOR * $SECTOR_SIZE + $DEVICE_SIZE))
-cat <<EOF | parted ---pretend-input-tty "$OUTPUT_FILE" >/dev/null 2>&1
+cat <<EOF | parted ---pretend-input-tty "$OUTPUT_FILE" >/dev/null 2>&1``
 resizepart $ROOT_PART 
 ${NEW_SIZE}B
 yes
@@ -165,6 +173,7 @@ echo "Test partition table for additional issue..."
 sgdisk -v "$OUTPUT_FILE" >/dev/null
 
 echo "Compress image."
-xz -fT 0 "$OUTPUT_FILE"
+echo "skip"
+#xz -fT 0 "$OUTPUT_FILE"
 
 echo "Image build completed."

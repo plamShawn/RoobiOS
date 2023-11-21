@@ -1,0 +1,203 @@
+{
+    token: d3f41378-7d47-4c5e-8e7a-68208d1e490a
+    main_address: http://120.24.183.202:9090/testprogram/
+    update_address: by_token/
+    update_list_address: test-items/
+    running_on_start: false
+    font_size: 15
+    auto: true
+    log_file: 1.log
+    script_path: script
+    test_item:
+    [
+        {
+            id: 2
+            content_md5: 45cf06973256c9cfba5830fe5187a3ae
+            name: ddr
+            file_name: ddr.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 1
+            content_md5: 0d5552d2feb83c8b4000cd4f67c9f3c4
+            name: CPU
+            file_name: cpu.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 5
+            content_md5: 8d8d90055b32d646015115b5aaa1f2bf
+            name: HDMI1
+            file_name: hdmi1.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 6
+            content_md5: d06ad19fb0757e0dc1573ff079f2ce7e
+            name: HDMI2
+            file_name: hdmi2.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 8
+            content_md5: 8be900fe275afaa5601010ce7ff70163
+            name: 声音 HDMI1
+            file_name: sound1.sh
+            is_enabled: true
+            auto: false
+            test_program: 1
+        }
+        {
+            id: 7
+            content_md5: 6d951705f2f95a6db3454675e34d727b
+            name: 声音 HDMI2
+            file_name: sound2.sh
+            is_enabled: true
+            auto: false
+            test_program: 1
+        }
+        {
+            id: 9
+            content_md5: fefe6ad0a4f2e509f17509ba2319b227
+            name: 声音 3.5mm
+            file_name: sound3.sh
+            is_enabled: true
+            auto: false
+            test_program: 1
+        }
+        {
+            id: 10
+            content_md5: 5e22b44bd0d99e747b6b5f25f030a36c
+            name: 录音
+            file_name: recode.sh
+            is_enabled: true
+            auto: false
+            test_program: 1
+        }
+        {
+            id: 12
+            content_md5: d8f53b24ed7c74251a636a75bd354a8d
+            name: PR2040
+            file_name: PR2040.py
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 14
+            content_md5: 39504db5c818b257bc51087e7a66a579
+            name: EMMC 读取
+            file_name: emmc_read.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 13
+            content_md5: f1487d2c9bcb6745caeb5a586d893e38
+            name: EMMC 写入
+            file_name: emmc_write.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 20
+            content_md5: 44527d28e09910bd3a4eb17d89a3132c
+            name: NVME 读取
+            file_name: nvme_read.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 21
+            content_md5: 6b80d8c6ccd9bd0cfd4dfb249b93eecc
+            name: NVME 写入
+            file_name: nvme_write.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 18
+            content_md5: 0fadb283d3640d4c2671c385d8cd8415
+            name: USB2.0
+            file_name: usb20.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 19
+            content_md5: 01cebd71b63cb8d7cd08eeda3be71631
+            name: USB3.0
+            file_name: usb30.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 22
+            content_md5: c6ff2187f74e9247949c4dc4ed198e2f
+            name: 以太网
+            file_name: eth.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 16
+            content_md5: 35c2cfa7116c210f4614677a30bae642
+            name: WiFi
+            file_name: wifi.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 17
+            content_md5: adbd3f2f8dad5c66f6092121e9ed664f
+            name: 电源键
+            file_name: powerkey.py
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 15
+            content_md5: 1b27963dcea225624b9413aae75bd6fb
+            name: 蓝牙
+            file_name: bt.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+        {
+            id: 23
+            content_md5: eaf73d2e0148a69e3065b29101a43704
+            name: 检查 刷入 mac 地址
+            file_name: mac_addr.sh
+            is_enabled: true
+            auto: true
+            test_program: 1
+        }
+    ]
+    id: 1
+    device_version: v1.1
+    device_name: PS006
+    name: 功能测试
+    description: ""
+    distribution_method: multiple
+    main_program: 1
+    content_md5: 2997f9178cdf9267992af08268fa10d3
+    debug: false
+}

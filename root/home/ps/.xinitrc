@@ -30,9 +30,10 @@ if [ -d /etc/X11/xinit/xinitrc.d ] ; then
  done
  unset f
 fi
-
+xrandr --output HDMI1 --auto --scale 1x1 --same-as HDMI2 --output HDMI2 --auto --scale 1x1
 if [ `tty` == '/dev/tty1' ]; then
 	exec electron /usr/Roobi/main.js
 elif [ `tty` == '/dev/tty6' ]; then
+  xset s off
   exec /bin/bash /usr/factory/progress/main.sh
 fi
