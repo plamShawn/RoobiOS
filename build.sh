@@ -134,8 +134,9 @@ find_root_part() {
 }
 
 SHRINK_SIZE=1
+sudo btrfs filesystem usage -b /mnt | grep "Free (estimated)" | sed "s/.*min: \([0-9]*\).*/\1/"
 while sudo btrfs filesystem resize -${SHRINK_SIZE} /mnt; do
-  SHRINK_SIZE=$(($(sudo btrfs filesystem usage -b /mnt | grep "Free (estimated)" | sed "s/.*min: \([0-9]*\).*/\1/") / 2))
+  SHRINK_SIZE=$(($(sudo btrfs filesystem usage -b /mnt | grep "Free (estimated)" | sed "s/.*min: \([0-9]*\).*/\1/") / 8))
 done
 DEVICE_SIZE=$(($(sudo btrfs filesystem usage -b /mnt | grep "Device size" | tr -s ' ' | cut -d ' ' -f 4)))
 
