@@ -116,7 +116,7 @@ arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 ########################## server ####################################
 echo "enable systemctl..."
-arch-chroot /mnt systemctl enable systemd-timesyncd NetworkManager growroot roobi roobiChecker
+arch-chroot /mnt systemctl enable systemd-timesyncd NetworkManager growroot roobi roobiChecker avahi-daemon
 
 echo "Clean up..."
 rm /mnt/var/cache/pacman/pkg/*

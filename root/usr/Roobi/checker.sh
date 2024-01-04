@@ -6,6 +6,9 @@ function check_item() {
     if [ "`systemctl is-active roobi`" != "active" ];then
         return 1
     fi
+    if [ "`curl -sL http://127.0.0.1/ping`" == "pong" ];then
+        exit 0
+    fi
     if [ "`curl -sL http://127.0.0.1:739/ping`" == "pong" ];then
         exit 0
     fi
